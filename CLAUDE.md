@@ -22,7 +22,8 @@
 **배포 완료.** <https://cho87880148-dotcom.github.io/daily/>
 저장소 <https://github.com/cho87880148-dotcom/bitnews> 가 아니라 **`daily`** 다 (Public).
 
-- GitHub Actions 가 **매시 정각**에 검색어를 새로 받아 Pages 로 배포한다
+- GitHub Actions 가 **매시 0분·30분**에 검색어를 새로 받아 Pages 로 배포한다
+  (예약 실행은 정확하지 않다. 서버가 바쁘면 5~20분 밀린다)
 - Pages Source 는 `GitHub Actions` (branch 방식 아님)
 - 아이폰: 사파리로 열고 공유 → 홈 화면에 추가
 
@@ -39,6 +40,20 @@ git commit --allow-empty -m "배포 재시도"; git push
 
 > `GET /repos/.../pages` 가 404 여도 **Pages 가 꺼진 게 아니다.**
 > 로그인 없이는 공개 저장소여도 404 가 온다. 이걸 근거로 판단하지 말 것.
+
+### 시각을 파일에 적을 때는 반드시 한국시각으로
+
+**GitHub 서버는 UTC 다.** `(Get-Date)` 를 그대로 쓰면 9시간 어긋난 시각이 찍힌다.
+실제로 검색어 화면에 9시간 전 시각이 표시돼 "자료가 낡았다"는 오해를 샀다(2026-08-06).
+`[DateTime]::UtcNow.AddHours(9)` 를 쓸 것 — 윈도우·리눅스 양쪽에서 동일하게 동작한다.
+
+### 아이콘을 바꾸려면
+
+`icon-source.jpg` 를 원하는 그림으로 바꿔치기하고 `.\make-icons.ps1` 실행.
+정사각형이 아니어도 가운데를 잘라 쓴다.
+
+**아이폰은 홈 화면에 추가하는 순간 아이콘을 폰에 저장한다.** 서버에서 바꿔도
+자동으로 안 바뀌고 새로고침으로도 안 된다. **지웠다가 다시 추가해야 한다.**
 
 ---
 
