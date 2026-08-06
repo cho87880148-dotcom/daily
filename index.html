@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>오늘</title>
+
+  <!-- 아이폰에서 "홈 화면에 추가" 했을 때 앱처럼 전체화면으로 뜨게 하는 설정입니다 -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="오늘" />
+  <meta name="theme-color" content="#0e1116" />
+  <link rel="apple-touch-icon" href="icon-180.png" />
+  <link rel="manifest" href="manifest.json" />
+
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+
+<header class="top">
+  <p class="today" id="today">—</p>
+  <h1 class="brand">오늘</h1>
+</header>
+
+<!-- ========================= 날씨 ========================= -->
+<section class="card">
+  <h2 class="card-title">주간 날씨</h2>
+
+  <div class="city-tabs" id="cityTabs">
+    <button class="city-tab is-on" data-city="seoul">서울</button>
+    <button class="city-tab" data-city="incheon">인천</button>
+    <button class="city-tab" data-city="busan">부산</button>
+  </div>
+
+  <div class="wx-now" id="wxNow">
+    <p class="wx-loading">날씨를 불러오는 중…</p>
+  </div>
+
+  <div class="wx-week" id="wxWeek"></div>
+</section>
+
+<!-- ========================= 인기 검색어 ========================= -->
+<section class="card">
+  <h2 class="card-title">지금 뜨는 검색어</h2>
+  <p class="stat-sub" id="trendSub">불러오는 중…</p>
+  <ol class="trend-list" id="trendList"></ol>
+</section>
+
+<!-- ========================= 로또 ========================= -->
+<section class="card">
+  <h2 class="card-title">로또 번호 뽑기</h2>
+
+  <!-- 추첨 기계 -->
+  <div class="machine" id="machine">
+    <div class="machine-glass">
+      <div class="machine-balls" id="machineBalls"></div>
+      <p class="machine-idle" id="machineIdle">버튼을 누르세요</p>
+    </div>
+    <div class="machine-chute"></div>
+  </div>
+
+  <!-- 굴러나온 번호가 놓이는 자리 -->
+  <div class="tray" id="tray"></div>
+
+  <button class="draw-btn" id="drawBtn">번호 뽑기</button>
+
+  <p class="draw-meta" id="drawMeta"></p>
+
+  <!-- 뽑은 조합에 대한 설명 -->
+  <div class="why" id="why" hidden>
+    <h3>이 조합을 뽑은 이유</h3>
+    <ul id="whyList"></ul>
+  </div>
+</section>
+
+<!-- ========================= 역대 통계 ========================= -->
+<section class="card" id="statCard" hidden>
+  <h2 class="card-title">역대 1등 번호 통계</h2>
+  <p class="stat-sub" id="statSub"></p>
+
+  <h3 class="stat-h">많이 나온 번호</h3>
+  <div class="stat-row" id="statHot"></div>
+
+  <h3 class="stat-h">오래 안 나온 번호</h3>
+  <div class="stat-row" id="statCold"></div>
+</section>
+
+<!-- ========================= 고지 ========================= -->
+<section class="card note-card">
+  <h2 class="card-title">읽어두세요</h2>
+  <p class="note">
+    로또는 매 회차가 완전히 독립입니다. <strong>과거 번호로 다음 번호를 맞히는 것은 불가능합니다.</strong>
+    이 앱이 뽑아주는 번호가 당첨될 확률은 아무렇게나 찍은 번호와 정확히 같습니다.
+  </p>
+  <p class="note">
+    다만 <strong>32 이상 번호를 넣는 것</strong>은 실제로 의미가 있습니다. 1등 당첨금은 당첨자끼리 나눠 갖는데,
+    사람들이 생일 때문에 1~31에 몰려 있어서 32~45가 섞인 조합은 당첨될 경우 나눠 갖는 인원이 적습니다.
+    <strong>확률이 아니라 받는 금액이 올라가는 것</strong>입니다.
+  </p>
+  <p class="note note-warn">
+    재미로 쓰는 도구입니다. 이 번호를 믿고 구매 금액을 늘리지 마세요.
+  </p>
+</section>
+
+<footer class="foot">
+  <p>혼자 쓰려고 만든 앱 · 날씨 자료 Open-Meteo · 당첨번호 동행복권</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

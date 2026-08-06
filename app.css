@@ -1,0 +1,275 @@
+/* ============================================================
+   색·간격은 전부 여기 :root 에 모아뒀습니다.
+   마음에 안 드는 색이 있으면 이 부분만 고치면 전체가 바뀝니다.
+   ============================================================ */
+:root {
+  --bg:        #0e1116;
+  --card:      #171c24;
+  --card-2:    #1f2630;
+  --line:      #2a323e;
+  --text:      #e8edf4;
+  --dim:       #98a4b3;
+  --accent:    #ffd23f;
+  --warn:      #ff8f6b;
+
+  /* 로또 공 색 — 실제 추첨 공과 같은 규칙입니다 */
+  --ball-1:  #fbc400;  /* 1~10   노랑 */
+  --ball-11: #69c8f2;  /* 11~20  파랑 */
+  --ball-21: #ff7272;  /* 21~30  빨강 */
+  --ball-31: #aaaaaa;  /* 31~40  회색 */
+  --ball-41: #b0d840;  /* 41~45  초록 */
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  /* 아이폰 노치·홈바를 피해서 여백을 줍니다 */
+  padding: max(env(safe-area-inset-top), 12px) 14px calc(env(safe-area-inset-bottom) + 24px);
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+/* ---------------- 머리말 ---------------- */
+.top { padding: 10px 4px 18px; }
+.today { margin: 0; font-size: 14px; color: var(--dim); letter-spacing: .02em; }
+.brand { margin: 2px 0 0; font-size: 30px; font-weight: 800; letter-spacing: -.02em; }
+
+/* ---------------- 카드 공통 ---------------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px 16px;
+  margin-bottom: 14px;
+}
+.card-title {
+  margin: 0 0 14px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+/* ---------------- 날씨 ---------------- */
+.city-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+.city-tab {
+  flex: 1;
+  padding: 9px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dim);
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+.city-tab.is-on {
+  color: #12161c;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.wx-now { display: flex; align-items: center; gap: 14px; min-height: 66px; }
+.wx-icon { font-size: 44px; line-height: 1; }
+.wx-temp { font-size: 34px; font-weight: 800; letter-spacing: -.02em; }
+.wx-desc { font-size: 14px; color: var(--dim); margin-top: 2px; }
+.wx-loading, .wx-error { color: var(--dim); font-size: 14px; margin: 0; }
+.wx-error { color: var(--warn); }
+
+.wx-week {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin-top: 16px;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.wx-day {
+  flex: 0 0 62px;
+  background: var(--card-2);
+  border-radius: 12px;
+  padding: 10px 6px;
+  text-align: center;
+}
+.wx-day-name { font-size: 12px; color: var(--dim); }
+.wx-day-name.is-sun { color: #ff7272; }
+.wx-day-name.is-sat { color: #69c8f2; }
+.wx-day-ico { font-size: 22px; margin: 6px 0 4px; }
+.wx-day-hi { font-size: 13px; font-weight: 700; }
+.wx-day-lo { font-size: 12px; color: var(--dim); }
+.wx-day-rain { font-size: 11px; color: #69c8f2; margin-top: 3px; min-height: 14px; }
+
+/* ---------------- 인기 검색어 ---------------- */
+.trend-list { margin: 0; padding: 0; list-style: none; counter-reset: rank; }
+.trend-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+}
+.trend-item:last-child { border-bottom: 0; }
+.trend-rank {
+  flex: 0 0 22px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dim);
+  text-align: center;
+}
+.trend-item:nth-child(-n+3) .trend-rank { color: var(--accent); }
+.trend-word {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trend-hit { font-size: 11px; color: var(--dim); flex: 0 0 auto; }
+
+/* ---------------- 추첨 기계 ---------------- */
+.machine { margin: 4px 0 6px; }
+.machine-glass {
+  position: relative;
+  height: 150px;
+  border-radius: 50% 50% 44% 44% / 58% 58% 42% 42%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.16), transparent 46%),
+    linear-gradient(180deg, #253040, #171d26);
+  border: 2px solid #38445a;
+  overflow: hidden;
+}
+.machine-idle {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0; font-size: 14px; color: var(--dim);
+}
+.machine-balls { position: absolute; inset: 0; }
+
+/* 통 안에서 튀어다니는 작은 공들 */
+.mini {
+  position: absolute;
+  width: 17px; height: 17px;
+  border-radius: 50%;
+  box-shadow: inset -2px -2px 4px rgba(0,0,0,.3);
+  animation: bounce var(--dur) ease-in-out infinite alternate;
+}
+@keyframes bounce {
+  from { transform: translate(0, 0); }
+  to   { transform: translate(var(--dx), var(--dy)); }
+}
+
+/* 공이 나오는 배출구 */
+.machine-chute {
+  width: 54px; height: 16px;
+  margin: -2px auto 0;
+  background: linear-gradient(180deg, #38445a, #222b38);
+  border-radius: 0 0 9px 9px;
+}
+
+/* ---------------- 뽑힌 번호 ---------------- */
+.tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: center;
+  align-items: center;
+  min-height: 52px;
+  margin: 16px 0 4px;
+}
+.ball {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; font-weight: 800;
+  color: #1a1a1a;
+  box-shadow: inset -3px -3px 6px rgba(0,0,0,.25), 0 2px 6px rgba(0,0,0,.4);
+  animation: rollOut .5s cubic-bezier(.34, 1.4, .5, 1) both;
+}
+/* 공이 배출구에서 굴러 떨어지는 느낌 */
+@keyframes rollOut {
+  0%   { opacity: 0; transform: translateY(-42px) rotate(-200deg) scale(.5); }
+  60%  { opacity: 1; transform: translateY(6px)   rotate(14deg)   scale(1.08); }
+  100% { opacity: 1; transform: translateY(0)     rotate(0)       scale(1); }
+}
+
+.ball.is-bonus { position: relative; }
+.plus {
+  color: var(--dim);
+  font-size: 20px;
+  font-weight: 700;
+  animation: rollOut .3s ease both;
+}
+.bonus-tag {
+  width: 100%;
+  text-align: center;
+  font-size: 11px;
+  color: var(--dim);
+  margin: 2px 0 0;
+}
+
+.draw-btn {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 15px 0;
+  font-size: 16px;
+  font-weight: 800;
+  font-family: inherit;
+  color: #12161c;
+  background: var(--accent);
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.draw-btn:active { transform: scale(.985); }
+.draw-btn:disabled { opacity: .45; }
+
+.draw-meta {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: var(--dim);
+  text-align: center;
+  min-height: 18px;
+}
+
+.why {
+  margin-top: 14px;
+  padding: 13px 14px;
+  background: var(--card-2);
+  border-radius: 12px;
+}
+.why h3 { margin: 0 0 8px; font-size: 13px; color: var(--accent); }
+.why ul { margin: 0; padding-left: 17px; }
+.why li { font-size: 13px; color: var(--dim); line-height: 1.65; }
+
+/* ---------------- 통계 ---------------- */
+.stat-sub { margin: -6px 0 14px; font-size: 12px; color: var(--dim); }
+.stat-h { margin: 14px 0 8px; font-size: 13px; color: var(--dim); font-weight: 600; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.stat-item { text-align: center; }
+.stat-item .ball { width: 36px; height: 36px; font-size: 14px; animation: none; }
+.stat-cnt { font-size: 11px; color: var(--dim); margin-top: 3px; }
+
+/* ---------------- 고지 ---------------- */
+.note-card { background: var(--card-2); }
+.note { margin: 0 0 10px; font-size: 13px; line-height: 1.7; color: var(--dim); }
+.note:last-child { margin-bottom: 0; }
+.note strong { color: var(--text); }
+.note-warn { color: var(--warn); }
+.note-warn strong { color: var(--warn); }
+
+.foot { padding: 16px 4px 0; text-align: center; }
+.foot p { margin: 0; font-size: 11px; color: #5d6875; }

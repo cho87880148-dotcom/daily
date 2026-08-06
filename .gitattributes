@@ -1,0 +1,6 @@
+# 줄바꿈을 LF 로 고정합니다.
+# CRLF 가 섞이면 GitHub 의 리눅스 서버에서 셸 명령이 깨집니다.
+* text=auto eol=lf
+
+# 그림 파일은 건드리지 않습니다
+*.png binary
