@@ -17,6 +17,31 @@
 
 ---
 
+## 현재 상태 (2026-08-06)
+
+**배포 완료.** <https://cho87880148-dotcom.github.io/daily/>
+저장소 <https://github.com/cho87880148-dotcom/bitnews> 가 아니라 **`daily`** 다 (Public).
+
+- GitHub Actions 가 **매시 정각**에 검색어를 새로 받아 Pages 로 배포한다
+- Pages Source 는 `GitHub Actions` (branch 방식 아님)
+- 아이폰: 사파리로 열고 공유 → 홈 화면에 추가
+
+### 배포가 `deployment_queued` 에서 멈추면
+
+`actions/deploy-pages` 가 대기하다 `Timeout reached, aborting!` 로 죽는 일이 있다.
+**설정 문제가 아니다.** 빈 커밋을 push 해서 다시 돌리면 대개 통과한다.
+
+```powershell
+git commit --allow-empty -m "배포 재시도"; git push
+```
+
+이 PC 에는 `gh` 명령이 없어서 `Re-run jobs` 버튼을 누를 수단이 이것뿐이다.
+
+> `GET /repos/.../pages` 가 404 여도 **Pages 가 꺼진 게 아니다.**
+> 로그인 없이는 공개 저장소여도 404 가 온다. 이걸 근거로 판단하지 말 것.
+
+---
+
 ## 명령어
 
 ```powershell
