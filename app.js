@@ -12,6 +12,7 @@
 var CITIES = {
   seoul:   { name: '서울', lat: 37.5665, lon: 126.9780 },
   incheon: { name: '인천', lat: 37.4563, lon: 126.7052 },
+  ansan:   { name: '안산', lat: 37.3219, lon: 126.8309 },
   busan:   { name: '부산', lat: 35.1796, lon: 129.0756 }
 };
 
@@ -47,6 +48,7 @@ function loadWeather(key) {
     + '?latitude=' + city.lat + '&longitude=' + city.lon
     + '&current=temperature_2m,weather_code'
     + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max'
+    + '&hourly=temperature_2m,weather_code,precipitation_probability'
     + '&timezone=Asia%2FSeoul&forecast_days=7';
 
   fetch(url)
@@ -86,7 +88,7 @@ function renderWeather(data) {
     var lk = weatherLook(data.daily.weather_code[i]);
     var rain = data.daily.precipitation_probability_max[i];
 
-    html += '<div class="wx-day">'
+    html += '<div class="wx-day" data-day="' + i + '">'
       + '<div class="wx-day-name' + cls + '">' + (i === 0 ? '오늘' : dayNames[dow]) + '</div>'
       + '<div class="wx-day-ico">' + lk[0] + '</div>'
       + '<div class="wx-day-hi">' + Math.round(data.daily.temperature_2m_max[i]) + '°</div>'
@@ -95,7 +97,79 @@ function renderWeather(data) {
       + '</div>';
   }
   weekBox.innerHTML = html;
+
+  // 요일을 누르면 그날의 시간대별 날씨를 폅니다
+  var dayEls = weekBox.querySelectorAll('.wx-day');
+  for (var k = 0; k < dayEls.length; k++) {
+    dayEls[k].addEventListener('click', function () {
+      showHourly(data, parseInt(this.getAttribute('data-day'), 10));
+    });
+  }
+
+  closeHourly();
 }
+
+/* ---- 시간대별 날씨 ---- */
+function closeHourly() {
+  document.getElementById('wxHourly').hidden = true;
+  var opened = document.querySelectorAll('.wx-day.is-open');
+  for (var i = 0; i < opened.length; i++) opened[i].classList.remove('is-open');
+}
+
+function showHourly(data, dayIndex) {
+  var box = document.getElementById('wxHourly');
+  var strip = document.getElementById('wxHourlyStrip');
+  var title = document.getElementById('wxHourlyTitle');
+
+  // 같은 날을 다시 누르면 닫습니다
+  var already = document.querySelector('.wx-day[data-day="' + dayIndex + '"]');
+  if (already && already.classList.contains('is-open')) { closeHourly(); return; }
+
+  closeHourly();
+  if (already) already.classList.add('is-open');
+
+  var dateStr = data.daily.time[dayIndex];          // 'YYYY-MM-DD'
+  var d = new Date(dateStr + 'T00:00:00+09:00');
+  var dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+  title.textContent = (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ('
+                    + dayNames[d.getDay()] + ') 시간대별';
+
+  // 지금 몇 시인지 (오늘이면 현재 시각을 표시해 줍니다)
+  var now = new Date();
+  var nowKey = null;
+  if (dayIndex === 0) {
+    nowKey = dateStr + 'T' + ('0' + now.getHours()).slice(-2) + ':00';
+  }
+
+  var html = '';
+  var firstNowAt = -1, shown = 0;
+  for (var i = 0; i < data.hourly.time.length; i++) {
+    var t = data.hourly.time[i];
+    if (t.indexOf(dateStr) !== 0) continue;          // 그날 것만 고릅니다
+
+    var hh = parseInt(t.slice(11, 13), 10);
+    var lk = weatherLook(data.hourly.weather_code[i]);
+    var rain = data.hourly.precipitation_probability[i];
+    var isNow = (nowKey && t === nowKey);
+    if (isNow) firstNowAt = shown;
+
+    html += '<div class="wx-hour' + (isNow ? ' is-now' : '') + '">'
+      + '<div class="wx-hour-t">' + (isNow ? '지금' : hh + '시') + '</div>'
+      + '<div class="wx-hour-i">' + lk[0] + '</div>'
+      + '<div class="wx-hour-d">' + Math.round(data.hourly.temperature_2m[i]) + '°</div>'
+      + '<div class="wx-hour-r">' + (rain >= 30 ? '💧' + rain + '%' : '') + '</div>'
+      + '</div>';
+    shown++;
+  }
+
+  strip.innerHTML = html;
+  box.hidden = false;
+
+  // 오늘이면 현재 시각이 보이게 가로 위치를 맞춰줍니다
+  strip.scrollLeft = firstNowAt > 1 ? (firstNowAt - 1) * 56 : 0;
+}
+
+document.getElementById('wxHourlyClose').addEventListener('click', closeHourly);
 
 // 도시 탭
 var tabs = document.querySelectorAll('.city-tab');
@@ -278,21 +352,192 @@ function drawBonus(main) {
   }
 }
 
-/* ---- 통 안에서 튀어다니는 작은 공들 ---- */
+/* ============================================================
+   통 안의 숫자공 45개 — 진짜 물리 계산으로 움직입니다.
+
+   CSS 애니메이션은 "A 에서 B 까지" 정해진 길을 반복할 수밖에 없어서
+   아무리 값을 흩어놔도 결국 같은 왕복으로 보입니다.
+   그래서 매 프레임 위치를 직접 계산합니다:
+
+     · 공마다 속도와 방향을 따로 갖습니다
+     · 매 프레임 무작위 바람을 넣습니다  ← 이것 때문에 길이 반복되지 않습니다
+     · 유리벽에 닿으면 튕겨 나옵니다 (원형이라 법선 방향으로 반사)
+     · 공끼리 부딪히면 서로 밀어내고 속도를 주고받습니다
+
+   추첨 중에는 목표 속도만 올립니다. 움직이는 방식은 그대로라
+   "돌아가던 상태 그대로" 공이 빠져나갑니다.
+   ============================================================ */
+var MINI_R    = 10;      // 공 반지름 (CSS 20px 의 절반)
+var SPEED_IDLE = 0.55;   // 평소 속도 (픽셀/프레임)
+var SPEED_SPIN = 3.4;    // 추첨 중 속도
+
+var physBalls  = [];
+var physRaf    = null;
+var physSpeed  = SPEED_IDLE;
+var physTarget = SPEED_IDLE;
+
+// 움직임을 불편해하는 설정을 켠 분에게는 물리 계산을 돌리지 않습니다
+var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function drumRadius() {
+  var el = document.getElementById('drum');
+  return (el && el.clientWidth ? el.clientWidth : 248) / 2;
+}
+
 function fillMachine() {
   var box = document.getElementById('machineBalls');
-  var html = '';
-  for (var i = 0; i < 14; i++) {
-    var n = Math.floor(Math.random() * 45) + 1;
-    var left = 8 + Math.random() * 78;
-    var top = 12 + Math.random() * 62;
-    var dx = (Math.random() * 40 - 20).toFixed(0);
-    var dy = (Math.random() * 40 - 20).toFixed(0);
-    var dur = (0.5 + Math.random() * 0.7).toFixed(2);
-    html += '<div class="mini" style="left:' + left.toFixed(1) + '%;top:' + top.toFixed(1) + '%;'
-          + 'background:' + ballColor(n) + ';--dx:' + dx + 'px;--dy:' + dy + 'px;--dur:' + dur + 's"></div>';
+  box.innerHTML = '';
+  physBalls = [];
+
+  var R = drumRadius();
+  var inner = R - MINI_R - 3;          // 유리 두께만큼 안쪽까지만
+  var frag = document.createDocumentFragment();
+
+  for (var n = 1; n <= 45; n++) {
+    var el = document.createElement('div');
+    el.className = 'mini';
+    el.setAttribute('data-n', n);
+    el.style.background = ballColor(n);
+    el.textContent = n;
+    frag.appendChild(el);
+
+    // 서로 겹치지 않는 자리를 찾습니다
+    var x = R, y = R, ok = false;
+    for (var t = 0; t < 150 && !ok; t++) {
+      var a = Math.random() * Math.PI * 2;
+      var r = Math.sqrt(Math.random()) * inner;
+      x = R + Math.cos(a) * r;
+      y = R + Math.sin(a) * r;
+      ok = true;
+      for (var j = 0; j < physBalls.length; j++) {
+        var ddx = physBalls[j].x - x, ddy = physBalls[j].y - y;
+        if (ddx * ddx + ddy * ddy < 4 * MINI_R * MINI_R) { ok = false; break; }
+      }
+    }
+
+    var dir = Math.random() * Math.PI * 2;
+    var sp0 = SPEED_IDLE * (0.5 + Math.random());
+    physBalls.push({
+      el: el, x: x, y: y,
+      vx: Math.cos(dir) * sp0,
+      vy: Math.sin(dir) * sp0,
+      rot: Math.random() * 360,
+      vr: Math.random() * 1.2 - 0.6
+    });
   }
-  box.innerHTML = html;
+
+  box.appendChild(frag);
+  paintBalls();
+  if (!reduceMotion) startPhysics();
+}
+
+function paintBalls() {
+  for (var i = 0; i < physBalls.length; i++) {
+    var b = physBalls[i];
+    b.el.style.transform = 'translate3d(' + b.x.toFixed(1) + 'px,' + b.y.toFixed(1) + 'px,0)'
+                         + ' rotate(' + b.rot.toFixed(0) + 'deg)';
+  }
+}
+
+function physStep() {
+  var R = drumRadius();
+  var inner = R - MINI_R - 3;
+  var i, j, b;
+
+  // 목표 속도로 서서히 따라갑니다 (갑자기 확 빨라지면 어색합니다)
+  physSpeed += (physTarget - physSpeed) * 0.05;
+  var turb = physSpeed * 0.55;          // 바람의 세기
+  var vMax = physSpeed * 1.6;
+  var vMin = physSpeed * 0.35;
+
+  for (i = 0; i < physBalls.length; i++) {
+    b = physBalls[i];
+
+    // ① 무작위 바람 — 매 프레임 방향이 조금씩 틀어져 같은 길을 안 돕니다
+    b.vx += (Math.random() - 0.5) * turb;
+    b.vy += (Math.random() - 0.5) * turb;
+
+    // ② 마찰
+    b.vx *= 0.985;
+    b.vy *= 0.985;
+
+    // ③ 너무 빠르거나 느려지지 않게 잡아줍니다
+    var sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    if (sp > vMax)          { b.vx = b.vx / sp * vMax; b.vy = b.vy / sp * vMax; }
+    else if (sp < vMin && sp > 0.0001) { b.vx = b.vx / sp * vMin; b.vy = b.vy / sp * vMin; }
+
+    b.x += b.vx;
+    b.y += b.vy;
+    b.rot += b.vr * (physSpeed / SPEED_IDLE);
+
+    // ④ 둥근 유리벽에 튕기기
+    var dx = b.x - R, dy = b.y - R;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d > inner && d > 0) {
+      var nx = dx / d, ny = dy / d;
+      b.x = R + nx * inner;
+      b.y = R + ny * inner;
+      var dot = b.vx * nx + b.vy * ny;
+      b.vx = (b.vx - 2 * dot * nx) * 0.88;
+      b.vy = (b.vy - 2 * dot * ny) * 0.88;
+      b.vr = Math.random() * 2.4 - 1.2;      // 부딪히면 회전이 바뀝니다
+    }
+  }
+
+  // ⑤ 공끼리 부딪히기
+  var minD = MINI_R * 2;
+  for (i = 0; i < physBalls.length; i++) {
+    for (j = i + 1; j < physBalls.length; j++) {
+      var a = physBalls[i], c = physBalls[j];
+      var ex = c.x - a.x, ey = c.y - a.y;
+      var d2 = ex * ex + ey * ey;
+      if (d2 >= minD * minD || d2 < 0.0001) continue;
+
+      var dd = Math.sqrt(d2);
+      var ux = ex / dd, uy = ey / dd;
+      var push = (minD - dd) / 2;
+
+      a.x -= ux * push; a.y -= uy * push;
+      c.x += ux * push; c.y += uy * push;
+
+      // 서로 다가오고 있을 때만 속도를 주고받습니다
+      var p = (a.vx - c.vx) * ux + (a.vy - c.vy) * uy;
+      if (p > 0) {
+        a.vx -= p * ux; a.vy -= p * uy;
+        c.vx += p * ux; c.vy += p * uy;
+      }
+    }
+  }
+
+  paintBalls();
+  physRaf = requestAnimationFrame(physStep);
+}
+
+function startPhysics() {
+  if (physRaf || reduceMotion) return;
+  physRaf = requestAnimationFrame(physStep);
+}
+function stopPhysics() {
+  if (physRaf) { cancelAnimationFrame(physRaf); physRaf = null; }
+}
+
+// 다른 탭에 가 있을 때는 계산을 멈춥니다 (배터리 아끼기)
+document.addEventListener('visibilitychange', function () {
+  if (document.hidden) stopPhysics(); else startPhysics();
+});
+
+// 뽑힌 공을 통에서 빼냅니다 — 나머지 공들은 계속 돌아갑니다
+function popFromMachine(n) {
+  for (var i = 0; i < physBalls.length; i++) {
+    if (physBalls[i].el.getAttribute('data-n') === String(n)) {
+      var b = physBalls[i];
+      physBalls.splice(i, 1);                      // 물리 계산에서 빼고
+      b.el.classList.add('is-out');
+      b.el.style.transform = 'translate3d(' + b.x.toFixed(1) + 'px,' + b.y.toFixed(1) + 'px,0) scale(.2)';
+      setTimeout(function () { if (b.el.parentNode) b.el.parentNode.removeChild(b.el); }, 340);
+      return;
+    }
+  }
 }
 
 /* ---- 뽑기 진행 ---- */
@@ -314,28 +559,35 @@ function runDraw() {
   meta.textContent = '';
   why.hidden = true;
   idle.style.display = 'none';
-  fillMachine();
+
+  fillMachine();                                        // 45개를 다시 채우고
+  document.getElementById('machine').classList.add('is-spinning');   // 배출구에 불이 들어옵니다
+  physTarget = SPEED_SPIN;                              // 공들이 세차게 돌아갑니다
 
   var main = drawSmart();
   var bonus = drawBonus(main);
 
-  // 공을 하나씩 내보냅니다
-  var i = 0;
-  var timer = setInterval(function () {
-    if (i < 6) {
-      tray.insertAdjacentHTML('beforeend', ballHtml(main[i]));
-      i++;
-      return;
-    }
-    // 6개가 다 나오면 보너스
-    clearInterval(timer);
-    setTimeout(function () {
-      tray.insertAdjacentHTML('beforeend', '<span class="plus">+</span>');
-      tray.insertAdjacentHTML('beforeend', ballHtml(bonus, 'is-bonus'));
-      tray.insertAdjacentHTML('beforeend', '<p class="bonus-tag">마지막 하나가 보너스 번호입니다</p>');
-      finishDraw(main, bonus);
-    }, 500);
-  }, 620);
+  // 통이 한 번 돌아간 뒤에 첫 공이 나오게 잠깐 기다립니다
+  setTimeout(function () {
+    var i = 0;
+    var timer = setInterval(function () {
+      if (i < 6) {
+        popFromMachine(main[i]);
+        tray.insertAdjacentHTML('beforeend', ballHtml(main[i]));
+        i++;
+        return;
+      }
+      // 6개가 다 나오면 보너스
+      clearInterval(timer);
+      setTimeout(function () {
+        popFromMachine(bonus);
+        tray.insertAdjacentHTML('beforeend', '<span class="plus">+</span>');
+        tray.insertAdjacentHTML('beforeend', ballHtml(bonus, 'is-bonus'));
+        tray.insertAdjacentHTML('beforeend', '<p class="bonus-tag">마지막 하나가 보너스 번호입니다</p>');
+        finishDraw(main, bonus);
+      }, 620);
+    }, 760);
+  }, 700);
 }
 
 function finishDraw(main, bonus) {
@@ -359,7 +611,9 @@ function finishDraw(main, bonus) {
     '<li style="color:var(--warn)">위 조건은 조합의 <strong>모양을 고르게 맞춘 것</strong>입니다. 마지막 항목을 빼면 <strong>당첨 확률은 아무 번호나 찍은 것과 완전히 같습니다.</strong></li>';
   why.hidden = false;
 
-  document.getElementById('machineBalls').innerHTML = '';
+  // 통은 그대로 두고 속도만 원래대로 낮춥니다 (뽑힌 7개는 빠진 상태로 계속 돕니다)
+  document.getElementById('machine').classList.remove('is-spinning');
+  physTarget = SPEED_IDLE;
   idle.style.display = '';
   idle.textContent = '다시 누르면 새로 뽑습니다';
 
@@ -369,6 +623,9 @@ function finishDraw(main, bonus) {
 }
 
 document.getElementById('drawBtn').addEventListener('click', runDraw);
+
+// 처음 열었을 때부터 통에 45개가 들어 있게 합니다
+fillMachine();
 
 
 /* ------------------------------------------------------------

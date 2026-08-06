@@ -29,6 +29,7 @@
   <div class="city-tabs" id="cityTabs">
     <button class="city-tab is-on" data-city="seoul">서울</button>
     <button class="city-tab" data-city="incheon">인천</button>
+    <button class="city-tab" data-city="ansan">안산</button>
     <button class="city-tab" data-city="busan">부산</button>
   </div>
 
@@ -37,6 +38,15 @@
   </div>
 
   <div class="wx-week" id="wxWeek"></div>
+
+  <!-- 요일을 누르면 그날의 시간대별 날씨가 여기에 펼쳐집니다 -->
+  <div class="wx-hourly" id="wxHourly" hidden>
+    <div class="wx-hourly-head">
+      <span id="wxHourlyTitle"></span>
+      <button class="wx-hourly-close" id="wxHourlyClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="wx-hourly-strip" id="wxHourlyStrip"></div>
+  </div>
 </section>
 
 <!-- ========================= 인기 검색어 ========================= -->
@@ -52,15 +62,27 @@
 
   <!-- 추첨 기계 -->
   <div class="machine" id="machine">
-    <div class="machine-glass">
-      <div class="machine-balls" id="machineBalls"></div>
-      <p class="machine-idle" id="machineIdle">버튼을 누르세요</p>
+
+    <!-- 유리 구 -->
+    <div class="drum" id="drum">
+      <div class="drum-balls" id="machineBalls"></div>
+      <div class="drum-glass"></div>   <!-- 유리에 비치는 빛 (공보다 위) -->
+      <div class="drum-rim"></div>     <!-- 금속 테두리 -->
     </div>
-    <div class="machine-chute"></div>
+
+    <!-- 배출관과 받침 -->
+    <div class="machine-neck">
+      <div class="machine-chute"></div>
+    </div>
+    <div class="machine-base"><span class="base-label">LOTTO 6/45</span></div>
+
+    <p class="machine-idle" id="machineIdle">버튼을 누르세요</p>
   </div>
 
-  <!-- 굴러나온 번호가 놓이는 자리 -->
-  <div class="tray" id="tray"></div>
+  <!-- 굴러나온 번호가 놓이는 레일 -->
+  <div class="rail">
+    <div class="tray" id="tray"></div>
+  </div>
 
   <button class="draw-btn" id="drawBtn">번호 뽑기</button>
 
