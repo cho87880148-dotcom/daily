@@ -50,8 +50,14 @@ if ($items.Count -eq 0) {
     exit 1
 }
 
+# ★ 반드시 한국시각으로 적어야 합니다.
+#   GitHub 서버는 UTC 로 돌아가서 (Get-Date) 를 그대로 쓰면 9시간 어긋난 시각이 찍힙니다.
+#   실제로 그렇게 나가서 "자료가 9시간 전 것"처럼 보였던 적이 있습니다 (2026-08-06).
+#   UtcNow + 9 는 윈도우와 리눅스 양쪽에서 똑같이 동작합니다.
+$kst = [DateTime]::UtcNow.AddHours(9)
+
 $out = [ordered]@{
-    updated = (Get-Date).ToString('yyyy-MM-dd HH:mm')
+    updated = $kst.ToString('yyyy-MM-dd HH:mm')
     source  = 'Google Trends KR'
     items   = @($items | Select-Object -First 10)
 }

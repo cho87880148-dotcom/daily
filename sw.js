@@ -8,7 +8,7 @@
    ※ 파일을 고친 뒤 폰에서 바뀐 게 안 보이면
       아래 CACHE 뒤의 숫자를 1 올리세요.
    ============================================================ */
-var CACHE = 'today-v1';
+var CACHE = 'today-v2';
 var SHELL = ['./', './index.html', './app.css', './app.js', './manifest.json'];
 
 self.addEventListener('install', function (e) {
@@ -35,9 +35,20 @@ self.addEventListener('fetch', function (e) {
   if (url.indexOf('open-meteo') !== -1 || url.indexOf('/data/') !== -1) return;
   if (e.request.method !== 'GET') return;
 
+  /*
+     인터넷이 되면 항상 새로 받고, 안 되면 저장해둔 것을 씁니다.
+
+     ※ 반대로 하면(저장해둔 것 먼저) 앱을 고쳐서 올려도 폰에는 옛날 화면이
+       계속 나옵니다. 그때마다 위 CACHE 숫자를 올려야 하는데 잊기 쉽습니다.
+       그래서 새로 받는 쪽을 먼저 두었습니다.
+  */
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
-      return hit || fetch(e.request);
+    fetch(e.request).then(function (res) {
+      var copy = res.clone();
+      caches.open(CACHE).then(function (c) { c.put(e.request, copy); });
+      return res;
+    }).catch(function () {
+      return caches.match(e.request);
     })
   );
 });
