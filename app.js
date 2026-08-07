@@ -207,31 +207,88 @@ function escapeHtml(s) {
                   .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-fetch('data/trends.json?t=' + Date.now())
-  .then(function (r) { return r.ok ? r.json() : null; })
-  .then(function (data) {
-    var sub = document.getElementById('trendSub');
-    var list = document.getElementById('trendList');
-    if (!data || !data.items || !data.items.length) {
-      sub.textContent = '아직 자료가 없습니다 — fetch-trends.ps1 을 한 번 실행하세요.';
-      return;
-    }
+/*
+   "얼마나 묵은 자료인가" 를 사람 말로 바꿉니다.
 
-    sub.textContent = data.updated + ' 기준 · 구글 트렌드 한국';
+   trends.json 의 updated 는 "2026-08-07 10:52" 처럼 한국시각으로 적혀 있습니다.
+   폰 시계가 어느 나라로 맞춰져 있든 똑같이 계산되도록, 적힌 시각에서
+   9시간을 빼서 세계표준시로 만든 뒤 비교합니다.
+*/
+function trendAge(updated) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(updated || '');
+  if (!m) return '';
 
-    list.innerHTML = data.items.slice(0, 10).map(function (it, i) {
-      var word = escapeHtml(it.word);
-      var href = 'https://search.naver.com/search.naver?query=' + encodeURIComponent(it.word);
-      return '<li class="trend-item">'
-           + '<span class="trend-rank">' + (i + 1) + '</span>'
-           + '<a class="trend-word" href="' + href + '" target="_blank" rel="noopener">' + word + '</a>'
-           + (it.hits ? '<span class="trend-hit">' + escapeHtml(it.hits) + '</span>' : '')
-           + '</li>';
-    }).join('');
-  })
-  .catch(function () {
-    document.getElementById('trendSub').textContent = '검색어를 못 불러왔습니다.';
-  });
+  var written = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 9, +m[5]);
+  var min = Math.floor((Date.now() - written) / 60000);
+
+  if (min < 0) return '';           // 폰 시계가 어긋난 경우 — 엉뚱한 말 대신 아무것도 안 씁니다
+  if (min < 2) return '방금';
+  if (min < 60) return min + '분 전';
+  if (min < 60 * 24) return Math.floor(min / 60) + '시간 전';
+  return Math.floor(min / (60 * 24)) + '일 전';
+}
+
+var trendLoadedAt = 0;
+
+function loadTrends() {
+  trendLoadedAt = Date.now();
+
+  return fetch('data/trends.json?t=' + Date.now())
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (data) {
+      var sub = document.getElementById('trendSub');
+      var list = document.getElementById('trendList');
+      if (!data || !data.items || !data.items.length) {
+        sub.textContent = '아직 자료가 없습니다 — fetch-trends.ps1 을 한 번 실행하세요.';
+        return;
+      }
+
+      // 앞의 연도는 빼고 "08-07 10:52" 처럼만 보여줍니다 (폰 화면이 좁아서)
+      var when = String(data.updated).replace(/^\d{4}-/, '');
+      var age = trendAge(data.updated);
+
+      sub.textContent = when + (age ? ' (' + age + ')' : '') + ' · 구글 트렌드 한국';
+
+      list.innerHTML = data.items.slice(0, 10).map(function (it, i) {
+        var word = escapeHtml(it.word);
+        var href = 'https://search.naver.com/search.naver?query=' + encodeURIComponent(it.word);
+        return '<li class="trend-item">'
+             + '<span class="trend-rank">' + (i + 1) + '</span>'
+             + '<a class="trend-word" href="' + href + '" target="_blank" rel="noopener">' + word + '</a>'
+             + (it.hits ? '<span class="trend-hit">' + escapeHtml(it.hits) + '</span>' : '')
+             + '</li>';
+      }).join('');
+    })
+    .catch(function () {
+      document.getElementById('trendSub').textContent = '검색어를 못 불러왔습니다.';
+    });
+}
+
+loadTrends();
+
+/*
+   ★ 앱을 다시 켤 때 검색어를 새로 읽습니다.
+
+   아이폰은 홈 화면 앱을 껐다 켜도 새로 여는 게 아니라 재워둔 화면을 그대로
+   깨웁니다. 그래서 위 loadTrends() 가 다시 안 돌고, 서버에 새 검색어가 있어도
+   몇 시간 전 화면이 그대로 보였습니다 (2026-08-07 확인).
+
+   visibilitychange 는 앱으로 돌아올 때, pageshow(persisted) 는 뒤로가기로
+   되살아날 때 각각 불립니다. 폰마다 둘 중 하나만 오는 경우가 있어 둘 다 답니다.
+   1분 안에 이미 읽었으면 건너뜁니다 — 화면을 몇 번 오갈 때마다 부르지 않으려는 것입니다.
+*/
+function refreshTrendsIfStale() {
+  if (Date.now() - trendLoadedAt < 60000) return;
+  loadTrends();
+}
+
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState === 'visible') refreshTrendsIfStale();
+});
+
+window.addEventListener('pageshow', function (e) {
+  if (e.persisted) refreshTrendsIfStale();
+});
 
 
 /* ------------------------------------------------------------

@@ -22,7 +22,7 @@
 **배포 완료.** <https://cho87880148-dotcom.github.io/daily/>
 저장소 <https://github.com/cho87880148-dotcom/bitnews> 가 아니라 **`daily`** 다 (Public).
 
-- GitHub Actions 가 **매시 0분·30분**에 검색어를 새로 받아 Pages 로 배포한다
+- GitHub Actions 가 **매시 7분·37분**에 검색어를 새로 받아 Pages 로 배포한다
   (예약 실행은 정확하지 않다. 서버가 바쁘면 5~20분 밀린다)
 - Pages Source 는 `GitHub Actions` (branch 방식 아님)
 - 아이폰: 사파리로 열고 공유 → 홈 화면에 추가
@@ -40,6 +40,22 @@ git commit --allow-empty -m "배포 재시도"; git push
 
 > `GET /repos/.../pages` 가 404 여도 **Pages 가 꺼진 게 아니다.**
 > 로그인 없이는 공개 저장소여도 404 가 온다. 이걸 근거로 판단하지 말 것.
+
+### ★ 예약(cron) 은 정각·30분에 두지 말 것
+
+`0,30` 으로 뒀더니 **14시간 동안 예약이 한 번만 시도되고 그마저 취소됐다**
+(8/6 20:34 ~ 8/7 10:52, 28번쯤 돌았어야 함. 2026-08-07 실행 기록으로 확인).
+정각과 30분은 전 세계가 몰리는 시각이라 **GitHub 이 밀린 예약을 미뤄주지 않고 버린다.**
+그래서 `7,37` 로 옮겼다. 앞으로 예약을 손볼 일이 있어도 0·15·30·45 분은 피할 것.
+
+증상은 "검색어가 몇 시간째 같은 시각에 멈춰 있다" 로 나타난다. 앱이 고장 난 게 아니다.
+실행 기록은 로그인 없이도 볼 수 있다:
+
+```powershell
+$r = Invoke-RestMethod "https://api.github.com/repos/cho87880148-dotcom/daily/actions/runs?per_page=40" -Headers @{'User-Agent'='ps'}
+$r.workflow_runs | Select-Object run_number, event, conclusion,
+  @{n='KST';e={([DateTime]$_.created_at).ToUniversalTime().AddHours(9).ToString('MM-dd HH:mm')}} | Format-Table
+```
 
 ### 시각을 파일에 적을 때는 반드시 한국시각으로
 
@@ -105,7 +121,20 @@ git commit --allow-empty -m "배포 재시도"; git push
 
 **브라우저에서 직접 못 부른다(CORS).** 그래서 `fetch-trends.ps1` 이 미리 받아
 `data/trends.json` 으로 저장하고, 앱은 그 파일만 읽는다.
-→ **자동으로 갱신되지 않는다.** 최신으로 보려면 스크립트를 실행해야 한다.
+배포판은 GitHub Actions 가 30분마다 이 스크립트를 돌려 갱신한다(위 참고).
+**PC 에서 미리보기로 볼 때만** 손으로 실행하면 된다.
+
+화면에는 `08-07 10:52 (38분 전)` 처럼 **얼마나 묵었는지 같이** 보여준다.
+절대 시각만 있으면 10분 된 자료와 14시간 된 자료를 구분할 수 없어서 넣었다.
+
+### ★ 아이폰은 앱을 껐다 켜도 화면을 새로 열지 않는다
+
+재워둔 화면을 그대로 깨우기 때문에 `loadTrends()` 가 **다시 안 돈다.**
+서버에 새 검색어가 있어도 몇 시간 전 화면이 그대로 보인다.
+그래서 `app.js` 에 `visibilitychange` · `pageshow` 를 달아 **앱으로 돌아올 때
+다시 읽게** 해뒀다 (1분 안에 이미 읽었으면 건너뛴다). 이 부분을 지우지 말 것.
+
+> 날씨(`loadWeather`)도 같은 사정이지만 아직 안 달아뒀다. 필요해지면 같은 방식으로.
 
 ## 3. 로또 뽑기 기준
 
@@ -156,8 +185,6 @@ git commit --allow-empty -m "배포 재시도"; git push
 
 ## 앞으로 할 만한 것
 
-- **인기 검색어 자동 갱신** — 지금은 손으로 `fetch-trends.ps1` 을 돌려야 한다.
-  GitHub Pages 에 올리고 Actions 를 붙이면 비트뉴스처럼 자동이 된다.
-  (다만 GitHub Pages 는 공개다. 개인 자료가 없으니 상관은 없다.)
 - 로또 당첨번호 엑셀 파서
+- 날씨도 앱으로 돌아올 때 새로 읽게 하기 (검색어는 2026-08-07 에 해뒀다)
 - 뽑은 번호를 저장해두고 다시 보기
