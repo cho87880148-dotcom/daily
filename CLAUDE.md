@@ -107,6 +107,11 @@ $r.workflow_runs | Select-Object run_number, event, conclusion,
 ## 1. 날씨 — Open-Meteo, API 키 없음
 
 `api.open-meteo.com` 을 브라우저가 직접 부른다. **가입도 키도 필요 없다.**
+
+받아온 날씨는 `wxCache` 에 **10분만** 저장한다(`WX_MAX_AGE`). 예전에는 기한이 없어서
+앱을 켜둔 채로 두면 몇 시간 전 날씨가 계속 보였다 (2026-08-07 에 고침).
+도시를 바꾸면 저장해둔 걸 먼저 보여주고 뒤에서 새로 받아 덮어쓴다 — 화면이 비지 않게.
+
 서울·인천·부산 위경도는 `app.js` 맨 위 `CITIES` 에 있다. 도시를 추가하려면
 거기에 한 줄 넣고 `index.html` 의 `city-tabs` 에 버튼을 하나 넣으면 된다.
 
@@ -132,9 +137,8 @@ $r.workflow_runs | Select-Object run_number, event, conclusion,
 재워둔 화면을 그대로 깨우기 때문에 `loadTrends()` 가 **다시 안 돈다.**
 서버에 새 검색어가 있어도 몇 시간 전 화면이 그대로 보인다.
 그래서 `app.js` 에 `visibilitychange` · `pageshow` 를 달아 **앱으로 돌아올 때
-다시 읽게** 해뒀다 (1분 안에 이미 읽었으면 건너뛴다). 이 부분을 지우지 말 것.
-
-> 날씨(`loadWeather`)도 같은 사정이지만 아직 안 달아뒀다. 필요해지면 같은 방식으로.
+검색어와 날씨를 다시 읽게** 해뒀다 (`refreshOnResume`). 이 부분을 지우지 말 것.
+지우면 "몇 시간째 화면이 안 바뀐다" 는 문제가 그대로 돌아온다.
 
 ## 3. 로또 뽑기 기준
 
@@ -186,5 +190,4 @@ $r.workflow_runs | Select-Object run_number, event, conclusion,
 ## 앞으로 할 만한 것
 
 - 로또 당첨번호 엑셀 파서
-- 날씨도 앱으로 돌아올 때 새로 읽게 하기 (검색어는 2026-08-07 에 해뒀다)
 - 뽑은 번호를 저장해두고 다시 보기

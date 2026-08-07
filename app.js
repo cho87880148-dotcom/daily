@@ -32,17 +32,38 @@ function weatherLook(code) {
   return ['🌡️', '—'];
 }
 
-var wxCache = {};   // 같은 도시를 다시 누르면 다시 안 부르게 저장해 둡니다
+/*
+   같은 도시를 다시 누르면 다시 안 부르게 저장해 둡니다.
 
-function loadWeather(key) {
+   ※ 예전에는 한 번 받으면 영영 그걸 썼습니다. 그래서 앱을 계속 켜두면
+     몇 시간 전 날씨가 계속 보였습니다 (2026-08-07 에 고침).
+     10분이 지나면 저장해둔 걸 버리고 새로 받습니다.
+*/
+var wxCache = {};
+var WX_MAX_AGE = 10 * 60 * 1000;   // 10분
+var currentCity = 'seoul';         // 지금 보고 있는 도시 (앱 복귀 시 이 도시를 새로 받습니다)
+
+function loadWeather(key, force) {
   var city = CITIES[key];
   var nowBox = document.getElementById('wxNow');
   var weekBox = document.getElementById('wxWeek');
 
-  if (wxCache[key]) { renderWeather(wxCache[key]); return; }
+  currentCity = key;
 
-  nowBox.innerHTML = '<p class="wx-loading">날씨를 불러오는 중…</p>';
-  weekBox.innerHTML = '';
+  var got = wxCache[key];
+  var fresh = got && (Date.now() - got.at) < WX_MAX_AGE;
+
+  // 저장해둔 게 아직 쓸 만하면 그걸 씁니다
+  if (!force && fresh) { renderWeather(got.data); return; }
+
+  if (got) {
+    // 저장해둔 게 오래됐어도 일단 보여줍니다. 그래야 도시를 바꾼 순간
+    // 이전 도시 날씨가 남아 있지 않습니다. 새로 받으면 아래에서 덮어씁니다.
+    renderWeather(got.data);
+  } else {
+    nowBox.innerHTML = '<p class="wx-loading">날씨를 불러오는 중…</p>';
+    weekBox.innerHTML = '';
+  }
 
   var url = 'https://api.open-meteo.com/v1/forecast'
     + '?latitude=' + city.lat + '&longitude=' + city.lon
@@ -57,11 +78,15 @@ function loadWeather(key) {
       return r.json();
     })
     .then(function (data) {
-      wxCache[key] = data;
-      renderWeather(data);
+      wxCache[key] = { at: Date.now(), data: data };
+      // 받는 사이에 다른 도시를 눌렀으면 그 화면을 덮어쓰지 않습니다
+      if (currentCity === key) renderWeather(data);
     })
     .catch(function () {
-      nowBox.innerHTML = '<p class="wx-error">날씨를 못 불러왔습니다. 인터넷 연결을 확인하세요.</p>';
+      // 이미 보여주던 게 있으면 그냥 둡니다. 잠깐 끊겼다고 지울 이유가 없습니다.
+      if (!got && currentCity === key) {
+        nowBox.innerHTML = '<p class="wx-error">날씨를 못 불러왔습니다. 인터넷 연결을 확인하세요.</p>';
+      }
     });
 }
 
@@ -267,27 +292,29 @@ function loadTrends() {
 loadTrends();
 
 /*
-   ★ 앱을 다시 켤 때 검색어를 새로 읽습니다.
+   ★ 앱을 다시 켤 때 검색어와 날씨를 새로 읽습니다.
 
    아이폰은 홈 화면 앱을 껐다 켜도 새로 여는 게 아니라 재워둔 화면을 그대로
-   깨웁니다. 그래서 위 loadTrends() 가 다시 안 돌고, 서버에 새 검색어가 있어도
-   몇 시간 전 화면이 그대로 보였습니다 (2026-08-07 확인).
+   깨웁니다. 그래서 loadTrends() 가 다시 안 돌고, 서버에 새 검색어가 있어도
+   몇 시간 전 화면이 그대로 보였습니다 (2026-08-07 확인). 날씨도 사정이 같습니다.
 
    visibilitychange 는 앱으로 돌아올 때, pageshow(persisted) 는 뒤로가기로
    되살아날 때 각각 불립니다. 폰마다 둘 중 하나만 오는 경우가 있어 둘 다 답니다.
    1분 안에 이미 읽었으면 건너뜁니다 — 화면을 몇 번 오갈 때마다 부르지 않으려는 것입니다.
+
+   ※ 이 부분을 지우면 "몇 시간째 화면이 안 바뀐다" 는 문제가 그대로 돌아옵니다.
 */
-function refreshTrendsIfStale() {
-  if (Date.now() - trendLoadedAt < 60000) return;
-  loadTrends();
+function refreshOnResume() {
+  if (Date.now() - trendLoadedAt >= 60000) loadTrends();
+  loadWeather(currentCity);   // 10분이 안 지났으면 loadWeather 가 알아서 건너뜁니다
 }
 
 document.addEventListener('visibilitychange', function () {
-  if (document.visibilityState === 'visible') refreshTrendsIfStale();
+  if (document.visibilityState === 'visible') refreshOnResume();
 });
 
 window.addEventListener('pageshow', function (e) {
-  if (e.persisted) refreshTrendsIfStale();
+  if (e.persisted) refreshOnResume();
 });
 
 
